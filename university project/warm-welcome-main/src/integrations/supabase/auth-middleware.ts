@@ -41,7 +41,7 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
         ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
       ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Set them in .env (see .env.example).`;
       console.error(`[Supabase] ${message}`);
       throw new Error(message);
     }
@@ -66,6 +66,16 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     if (!token) {
       throw new Error('Unauthorized: No token provided');
     }
+
+    // Per-request client. Real JWTs are forwarded so RLS runs as that user.
+    const isJwt = token.split('.').length === 3 && !token.includes('demo');
+    const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: {
+        fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+        headers: isJwt ? { Authorization: `Bearer ${token}` } : {},
+      },
+      auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+    });
 
     if (token.startsWith('demo') || token.includes('demo')) {
       return next({
