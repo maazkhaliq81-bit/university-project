@@ -1,0 +1,1 @@
+ALTER TABLE public.roadmap_items ADD COLUMN IF NOT EXISTS sub_topics jsonb NOT NULL DEFAULT '[]'::jsonb;
